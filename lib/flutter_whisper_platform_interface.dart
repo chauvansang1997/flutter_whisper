@@ -1,3 +1,4 @@
+import 'package:flutter_whisper/models/whisper_language.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'flutter_whisper_method_channel.dart';
@@ -23,7 +24,10 @@ abstract class FlutterWhisperPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> loadModel({required String modelPath, bool isAsset = true});
+
+  Future<WhisperLanguage?> detectLanguageAudio({required String audioPath});
+
+  Future<String?> transcribeAudio(
+      {required String audioPath, String? language});
 }

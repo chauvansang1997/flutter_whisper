@@ -16,24 +16,37 @@ class WhisperContext private constructor(private var ptr: Long) {
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
 
-    suspend fun transcribeData(data: FloatArray): String = withContext(scope.coroutineContext) {
+    fun transcribeData(data: FloatArray): String {
         require(ptr != 0L)
         val numThreads = WhisperCpuConfig.preferredThreadCount
         Log.d(LOG_TAG, "Selecting $numThreads threads")
         WhisperLib.fullTranscribe(ptr, numThreads, data)
         val textCount = WhisperLib.getTextSegmentCount(ptr)
-        return@withContext buildString {
+        return buildString {
             for (i in 0 until textCount) {
                 append(WhisperLib.getTextSegment(ptr, i))
             }
         }
     }
 
-    suspend fun detectLanguage(data: FloatArray): String = withContext(scope.coroutineContext) {
+    fun transcribeDataWithLanguage(data: FloatArray, language: String): String {
         require(ptr != 0L)
         val numThreads = WhisperCpuConfig.preferredThreadCount
         Log.d(LOG_TAG, "Selecting $numThreads threads")
-        return@withContext WhisperLib.detectLanguages(ptr, numThreads, data)
+        WhisperLib.fullTranscribeWithLanguage(ptr, language, numThreads, data)
+        val textCount = WhisperLib.getTextSegmentCount(ptr)
+        return buildString {
+            for (i in 0 until textCount) {
+                append(WhisperLib.getTextSegment(ptr, i))
+            }
+        }
+    }
+
+    fun detectLanguage(data: FloatArray): String {
+        require(ptr != 0L)
+        val numThreads = WhisperCpuConfig.preferredThreadCount
+        Log.d(LOG_TAG, "Selecting $numThreads threads")
+        return WhisperLib.detectLanguages(ptr, numThreads, data)
     }
 
     suspend fun benchMemory(nthreads: Int): String = withContext(scope.coroutineContext) {
@@ -136,7 +149,19 @@ private class WhisperLib {
         external fun initContext(modelPath: String): Long
         external fun freeContext(contextPtr: Long)
         external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray)
-        external fun detectLanguages(contextPtr: Long, numThreads: Int, audioData: FloatArray): String
+        external fun fullTranscribeWithLanguage(
+            contextPtr: Long,
+            language: String,
+            numThreads: Int,
+            audioData: FloatArray
+        )
+
+        external fun detectLanguages(
+            contextPtr: Long,
+            numThreads: Int,
+            audioData: FloatArray
+        ): String
+
         external fun getTextSegmentCount(contextPtr: Long): Int
         external fun getTextSegment(contextPtr: Long, index: Int): String
         external fun getSystemInfo(): String

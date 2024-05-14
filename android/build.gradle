@@ -87,7 +87,7 @@ android {
         implementation project(':flutter_whisper:lib')
 
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
-        testImplementation 'org.mockito:mockito-core:5.0.0'
+        testImplementation 'org.mockito:mockito-core:5.2.0'
     }
 
     testOptions {

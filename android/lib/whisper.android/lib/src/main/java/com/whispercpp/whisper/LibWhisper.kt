@@ -90,7 +90,7 @@ class WhisperContext private constructor(private var ptr: Long) {
     }
 }
 
-private class WhisperLib {
+class WhisperLib {
     companion object {
         init {
             Log.d(LOG_TAG, "Primary ABI: ${Build.SUPPORTED_ABIS[0]}")

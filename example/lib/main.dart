@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_whisper/flutter_whisper.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,9 +20,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
   final _flutterWhisperPlugin = FlutterWhisper();
-
+  String _transcript = '';
   @override
   void initState() {
     super.initState();
@@ -27,24 +30,60 @@ class _MyAppState extends State<MyApp> {
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await _flutterWhisperPlugin.getPlatformVersion() ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+    _flutterWhisperPlugin.loadModel(modelPath: 'assets/models/ggml-base.bin');
+    final audioPath = await saveAssetToCache('assets/samples/jfk.wav');
+
+    // _flutterWhisperPlugin
+    //     .detectLanguageAudio(audioPath: audioPath)
+    //     .then((language) {
+    //   final languageCode = language?.languageCode;
+    //   final languageName = language?.languageName;
+
+    //   print('languageCode1: $languageCode, languageName1: $languageName');
+    // });
+
+    final language =
+        await _flutterWhisperPlugin.detectLanguageAudio(audioPath: audioPath);
+    final languageCode = language?.languageCode;
+    final languageName = language?.languageName;
+
+    print('languageCode: $languageCode, languageName: $languageName');
+
+    if (languageCode == null) {
+      return;
     }
 
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
+    _transcript = await _flutterWhisperPlugin.transcribeAudio(
+            audioPath: audioPath, language: languageCode) ??
+        '';
 
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+    setState(() {});
+    // if (!mounted) return;
+  }
+
+  Future<String> saveAssetToCache(String assetPath) async {
+    try {
+      // Get the directory for the cache
+      Directory cacheDir = await getTemporaryDirectory();
+
+      // Create a File instance for the destination file in the cache directory
+      File destFile = File('${cacheDir.path}/jfk.wav');
+
+      // Open the asset file
+      ByteData data = await rootBundle.load(assetPath);
+      List<int> bytes = data.buffer.asUint8List();
+
+      // Write the asset data to the destination file
+      await destFile.writeAsBytes(bytes);
+
+      print('Asset saved to cache: ${destFile.path}');
+
+      return destFile.path;
+    } catch (e) {
+      print('Failed to save asset to cache: $e');
+
+      throw e;
+    }
   }
 
   @override
@@ -54,8 +93,14 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Plugin example app'),
         ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+        body: Stack(
+          children: [
+            Center(
+              child: Text('Running on: \n $_transcript'),
+            ),
+            if (_transcript.isEmpty)
+              const Center(child: CircularProgressIndicator())
+          ],
         ),
       ),
     );
